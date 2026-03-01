@@ -947,19 +947,40 @@ end)
 --  CRÉATION FENÊTRE RAYFIELD
 -- ══════════════════════════════════════════════════════════════
 local Window = Rayfield:CreateWindow({
-    Name            = "JJS Hub V4",
-    Icon            = 0,
-    LoadingTitle    = "Jujutsu Shenanigans Hub V4 by ibras100",
-    LoadingSubtitle = "TP Direct | Black Flash Chain",
-    Theme           = "Default",
-    DisableRayfieldPrompts = false,
-    DisableBuildWarnings   = false,
-    ConfigurationSaving = {
-        Enabled    = true,
-        FolderName = "JJSHubV4",
-        FileName   = "Config",
-    },
-    KeySystem = false,
+   Name = "JJS Hub V4",
+   Icon = 0,
+   LoadingTitle = "Jujutsu Shenanigans Hub V4",
+   LoadingSubtitle = "by ibras100",
+   Theme = "Default",
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false -- Prevents Rayfield from emitting warnings when the script has a version mismatch with the interface.
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = JJShubv4, -- Create a custom folder for your hub/game
+      FileName = "Config for jjs hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include Discord.gg/. E.g. Discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the Discord every time they load it up
+   },
+
+   KeySystem = true, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Grab key",
+      Subtitle = "Key sys",
+      Note = "Copy the link for the key then enjoy !
+       https://lootdest.org/s?vO7bAEdw         ", -- Use this to tell the user how to get a key
+      FileName = "Sys key jjs hub", -- It is recommended to use something unique, as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = true, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"https://pastebin.com/raw/NwuUCDeq"} -- List of keys that the system will accept, can be RAW file links (pastebin, github, etc.) or simple strings ("hello", "key22")
+   }
 })
 
 -- ══════════════════════════════════════════════════════════════
