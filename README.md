@@ -1,1 +1,3 @@
-# jjs_script_by_ibr100
+contact : discord : ibras100
+        : x : Ibras100
+Any question ? Contact me .
