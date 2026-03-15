@@ -1,516 +1,501 @@
 --[[
 ╔══════════════════════════════════════════════════════════════════════════╗
-║        JUJUTSU SHENANIGANS HUB V4 — RAYFIELD EDITION                   ║
-║   ⚡ Black Flash Chain REEL ★ TP Direct ★ ESP ★ Auto Combat ★ Fly      ║
-║   FONCTIONNE avec VirtualInputManager — aucun RemoteEvent nécessaire  
-║   Contact discord : ibras100
-    Warning : Using this tool on a public server may result in you being banned. 
+║          JUJUTSU SHENANIGANS HUB V4 — WIND UI EDITION                   ║
+║   ⚡ Black Flash Chain ★ Dash-To ★ ESP ★ Auto Combat ★ Fly             ║
+║   Compatible: Xeno (PC) & Delta (Mobile)                                 ║
+║   Works with: Players AND Dummies/NPCs                                   ║
+║   Contact discord: ibras100                                              ║
+║   Warning: Using this on a public server may result in a ban.            ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 --]]
 
 -- ══════════════════════════════════════════════════════════════
 --  SERVICES
 -- ══════════════════════════════════════════════════════════════
-local Players           = game:GetService("Players")
-local RunService        = game:GetService("RunService")
-local UserInputService  = game:GetService("UserInputService")
-local VirtualInputMgr   = game:GetService("VirtualInputManager")
-local TweenService      = game:GetService("TweenService")
-local Lighting          = game:GetService("Lighting")
-local VirtualUser       = game:GetService("VirtualUser")
-local TeleportService   = game:GetService("TeleportService")
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService     = game:GetService("TweenService")
+local Lighting         = game:GetService("Lighting")
+local VirtualUser      = game:GetService("VirtualUser")
+local TeleportService  = game:GetService("TeleportService")
 
--- ══════════════════════════════════════════════════════════════
---  RAYFIELD
--- ══════════════════════════════════════════════════════════════
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local VirtualInputMgr
+local VIM_OK = pcall(function()
+    VirtualInputMgr = game:GetService("VirtualInputManager")
+end)
+if not VIM_OK then VirtualInputMgr = nil end
 
--- ══════════════════════════════════════════════════════════════
---  RACCOURCIS
--- ══════════════════════════════════════════════════════════════
 local LP  = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 
 -- ══════════════════════════════════════════════════════════════
---  HELPERS PERSONNAGE
+--  KEY SYSTEM  (custom — runs before UI loads)
+--  Fetches the valid key from pastebin, compares with input.
+--  Saves to file so the user only enters it once.
 -- ══════════════════════════════════════════════════════════════
-local function getChar()
-    return LP.Character
+local KEY_FILE = "JJS_Hub_Key.txt"
+local KEY_URL  = "https://pastebin.com/raw/NwuUCDeq"
+
+local function fetchValidKey()
+    local ok, result = pcall(function() return game:HttpGet(KEY_URL) end)
+    return ok and result:gsub("%s+", "") or nil
 end
 
+local function checkKey(input)
+    local valid = fetchValidKey()
+    if not valid then return false end
+    return input:gsub("%s+", "") == valid
+end
+
+-- Try loading saved key first
+local keyPassed = false
+if isfile and isfile(KEY_FILE) then
+    local saved = readfile(KEY_FILE)
+    if checkKey(saved) then keyPassed = true end
+end
+
+-- If no valid saved key, show a key prompt screen
+if not keyPassed then
+    local sg = Instance.new("ScreenGui")
+    sg.Name            = "JJS_KeyPrompt"
+    sg.ResetOnSpawn    = false
+    sg.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+    sg.Parent          = LP:WaitForChild("PlayerGui")
+
+    -- Dark overlay
+    local overlay = Instance.new("Frame", sg)
+    overlay.Size                 = UDim2.fromScale(1, 1)
+    overlay.BackgroundColor3     = Color3.fromRGB(6, 6, 10)
+    overlay.BackgroundTransparency = 0.15
+
+    -- Card
+    local card = Instance.new("Frame", overlay)
+    card.Size         = UDim2.fromOffset(440, 230)
+    card.Position     = UDim2.fromScale(0.5, 0.5)
+    card.AnchorPoint  = Vector2.new(0.5, 0.5)
+    card.BackgroundColor3 = Color3.fromRGB(16, 16, 26)
+    local cc = Instance.new("UICorner", card); cc.CornerRadius = UDim.new(0, 14)
+    local cs = Instance.new("UIStroke", card)
+    cs.Color = Color3.fromRGB(110, 0, 210); cs.Thickness = 2
+
+    local titleL = Instance.new("TextLabel", card)
+    titleL.Size                  = UDim2.new(1, 0, 0, 38)
+    titleL.Position              = UDim2.fromOffset(0, 14)
+    titleL.BackgroundTransparency = 1
+    titleL.TextColor3            = Color3.new(1, 1, 1)
+    titleL.TextScaled            = true
+    titleL.Font                  = Enum.Font.GothamBold
+    titleL.Text                  = "⚡ JJS Hub V4 — Key Required"
+
+    local noteL = Instance.new("TextLabel", card)
+    noteL.Size                   = UDim2.new(1, -20, 0, 22)
+    noteL.Position               = UDim2.new(0.5, 0, 0, 58)
+    noteL.AnchorPoint            = Vector2.new(0.5, 0)
+    noteL.BackgroundTransparency = 1
+    noteL.TextColor3             = Color3.fromRGB(160, 160, 160)
+    noteL.TextScaled             = true
+    noteL.Font                   = Enum.Font.Gotham
+    noteL.Text                   = "Get the key here : https://pastebin.com/raw/NwuUCDeq"
+
+    local inputBg = Instance.new("Frame", card)
+    inputBg.Size              = UDim2.new(1, -24, 0, 38)
+    inputBg.Position          = UDim2.new(0.5, 0, 0, 92)
+    inputBg.AnchorPoint       = Vector2.new(0.5, 0)
+    inputBg.BackgroundColor3  = Color3.fromRGB(28, 28, 44)
+    local ic = Instance.new("UICorner", inputBg); ic.CornerRadius = UDim.new(0, 8)
+    local is = Instance.new("UIStroke", inputBg)
+    is.Color = Color3.fromRGB(70, 70, 100); is.Thickness = 1
+
+    local inputBox = Instance.new("TextBox", inputBg)
+    inputBox.Size                = UDim2.fromScale(1, 1)
+    inputBox.BackgroundTransparency = 1
+    inputBox.TextColor3          = Color3.new(1, 1, 1)
+    inputBox.PlaceholderText     = "Paste your key here..."
+    inputBox.PlaceholderColor3   = Color3.fromRGB(100, 100, 100)
+    inputBox.Text                = ""
+    inputBox.TextScaled          = true
+    inputBox.Font                = Enum.Font.Gotham
+    inputBox.ClearTextOnFocus    = false
+
+    local statusL = Instance.new("TextLabel", card)
+    statusL.Size                   = UDim2.new(1, -24, 0, 18)
+    statusL.Position               = UDim2.new(0.5, 0, 0, 140)
+    statusL.AnchorPoint            = Vector2.new(0.5, 0)
+    statusL.BackgroundTransparency = 1
+    statusL.TextColor3             = Color3.fromRGB(220, 80, 80)
+    statusL.TextScaled             = true
+    statusL.Font                   = Enum.Font.Gotham
+    statusL.Text                   = ""
+
+    local btn = Instance.new("TextButton", card)
+    btn.Size              = UDim2.new(1, -24, 0, 38)
+    btn.Position          = UDim2.new(0.5, 0, 0, 168)
+    btn.AnchorPoint       = Vector2.new(0.5, 0)
+    btn.BackgroundColor3  = Color3.fromRGB(95, 0, 190)
+    btn.TextColor3        = Color3.new(1, 1, 1)
+    btn.Text              = "Verify Key"
+    btn.TextScaled        = true
+    btn.Font              = Enum.Font.GothamBold
+    local bc = Instance.new("UICorner", btn); bc.CornerRadius = UDim.new(0, 8)
+
+    -- Hover effect
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3=Color3.fromRGB(120,0,240)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3=Color3.fromRGB(95,0,190)}):Play()
+    end)
+
+    local verified = false
+    btn.MouseButton1Click:Connect(function()
+        local k = inputBox.Text
+        if k == "" then
+            statusL.Text = "Please enter a key."
+            statusL.TextColor3 = Color3.fromRGB(220,80,80)
+            return
+        end
+        statusL.Text = "Checking..."
+        statusL.TextColor3 = Color3.fromRGB(200, 200, 60)
+        task.spawn(function()
+            if checkKey(k) then
+                statusL.Text = "✓ Valid! Loading..."
+                statusL.TextColor3 = Color3.fromRGB(60, 220, 80)
+                if writefile then writefile(KEY_FILE, k) end
+                verified = true
+                task.wait(0.7)
+                TweenService:Create(overlay,
+                    TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency=1}):Play()
+                task.wait(0.4)
+                sg:Destroy()
+            else
+                statusL.Text = "✗ Invalid key. Try again."
+                statusL.TextColor3 = Color3.fromRGB(220, 60, 60)
+            end
+        end)
+    end)
+
+    while not verified do task.wait(0.1) end
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  WIND UI
+-- ══════════════════════════════════════════════════════════════
+local WindUI = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+))()
+
+-- ══════════════════════════════════════════════════════════════
+--  CHARACTER HELPERS
+-- ══════════════════════════════════════════════════════════════
+local function getChar() return LP.Character end
 local function getRoot()
     local c = getChar()
-    if c then return c:FindFirstChild("HumanoidRootPart") end
-    return nil
+    return c and c:FindFirstChild("HumanoidRootPart")
 end
-
 local function getHum()
     local c = getChar()
-    if c then return c:FindFirstChildOfClass("Humanoid") end
-    return nil
+    return c and c:FindFirstChildOfClass("Humanoid")
 end
 
--- Ennemi le plus proche
-local function nearestEnemy(maxDist)
+-- ══════════════════════════════════════════════════════════════
+--  STATE  (declared before dashTo so dashTo can read S.WalkSpeed)
+-- ══════════════════════════════════════════════════════════════
+local BF_STATS = { hits=0, combos=0, maxCombo=0, cur=0 }
+
+local S = {
+    BFActive   = false, BFThread    = nil,
+    BFSkeyCode = Enum.KeyCode.Three,
+    BFTiming1  = 0.29,  BFTiming2   = 0.30,
+    BFChainNum = 3,     BFCooldown  = 1.0,
+    BFAutoTP   = true,  BFTPOffset  = 3.5,
+    BFDashSpeed= 280,
+
+    AutoFarm   = false, FarmRange   = 5,   FarmDelay  = 0.13,
+    AutoBlock  = false, AutoDodge   = false,
+    AutoS1=false, AutoS2=false, AutoS3=false, AutoS4=false, SkillDelay=0.6,
+    AutoDomain = false, DomainCD    = 30,
+
+    WalkSpeed  = 16,    JumpPower   = 50,
+    NoClip     = false,
+    FlyOn      = false, FlySpeed    = 60,
+    GodMode    = false,
+    SpinBot    = false, SpinSpeed   = 5,
+
+    ESP        = false,
+    ESPFill    = Color3.fromRGB(160, 0, 255),
+    ESPOutline = Color3.fromRGB(255, 255, 255),
+    ESPDist    = 500,
+    FullBright = false,
+    Aura       = false, AuraColor   = Color3.fromRGB(120, 0, 220),
+
+    AntiAFK    = true,
+    LockOn     = false, LockTarget  = nil,
+    HitboxOn   = false, HitboxSize  = 6,
+}
+
+-- ══════════════════════════════════════════════════════════════
+--  DASH-TO  — MoveTo method
+--  Boosts WalkSpeed then calls Humanoid:MoveTo().
+--  Goes around walls naturally, zero extra physics objects.
+-- ══════════════════════════════════════════════════════════════
+local function dashTo(targetPos, speed, timeout)
+    speed   = speed   or 280
+    timeout = timeout or 3
+    local hum = getHum()
+    if not hum then return end
+    hum.WalkSpeed = speed
+    hum:MoveTo(targetPos)
+    local arrived = false
+    local conn = hum.MoveToFinished:Connect(function() arrived = true end)
+    local elapsed = 0
+    while not arrived and elapsed < timeout do elapsed += task.wait() end
+    conn:Disconnect()
+    hum.WalkSpeed = S.WalkSpeed
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  TARGET SYSTEM — Players + Dummies/NPCs
+-- ══════════════════════════════════════════════════════════════
+local function getAllTargets(maxDist)
     maxDist = maxDist or math.huge
-    local root = getRoot()
-    if not root then return nil, math.huge end
-    local best     = nil
-    local bestDist = maxDist
+    local myRoot = getRoot()
+    if not myRoot then return {} end
+    local seen, list = {}, {}
+
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LP and p.Character then
             local r = p.Character:FindFirstChild("HumanoidRootPart")
             local h = p.Character:FindFirstChildOfClass("Humanoid")
-            if r and h and h.Health > 0 then
-                local d = (root.Position - r.Position).Magnitude
-                if d < bestDist then
-                    bestDist = d
-                    best     = p
-                end
-            end
-        end
-    end
-    return best, bestDist
-end
-
--- Tous les ennemis triés par distance
-local function allEnemies(maxDist)
-    maxDist = maxDist or math.huge
-    local root = getRoot()
-    if not root then return {} end
-    local list = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and p.Character then
-            local r = p.Character:FindFirstChild("HumanoidRootPart")
-            local h = p.Character:FindFirstChildOfClass("Humanoid")
-            if r and h and h.Health > 0 then
-                local d = (root.Position - r.Position).Magnitude
+            if r and h and h.Health > 0 and not seen[r] then
+                local d = (myRoot.Position - r.Position).Magnitude
                 if d <= maxDist then
-                    table.insert(list, {player = p, dist = d})
+                    seen[r] = true
+                    table.insert(list, {root=r, hum=h, name=p.Name, dist=d, isNPC=false})
                 end
             end
         end
     end
+
+    local playerChars = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character then playerChars[p.Character] = true end
+    end
+    local myChar = getChar()
+
+    for _, model in ipairs(workspace:GetDescendants()) do
+        if model:IsA("Model") and model ~= myChar and not playerChars[model] then
+            local r = model:FindFirstChild("HumanoidRootPart")
+            local h = model:FindFirstChildOfClass("Humanoid")
+            if r and h and h.Health > 0 and not seen[r] then
+                local d = (myRoot.Position - r.Position).Magnitude
+                if d <= maxDist then
+                    seen[r] = true
+                    table.insert(list, {root=r, hum=h, name=model.Name, dist=d, isNPC=true})
+                end
+            end
+        end
+    end
+
     table.sort(list, function(a, b) return a.dist < b.dist end)
     return list
 end
 
--- ══════════════════════════════════════════════════════════════
---  TÉLÉPORTATION DIRECTE (CFrame — marche toujours)
--- ══════════════════════════════════════════════════════════════
-
--- Tp derrière un ennemi
-local function tpBehindEnemy(enemy, offset)
-    offset = offset or 4
-    if not enemy or not enemy.Character then return false end
-    local er = enemy.Character:FindFirstChild("HumanoidRootPart")
-    local mr = getRoot()
-    if er and mr then
-        -- On se place derrière lui selon sa direction
-        mr.CFrame = er.CFrame * CFrame.new(0, 0, offset)
-        return true
-    end
-    return false
-end
-
--- Tp devant un ennemi (face à lui)
-local function tpFaceEnemy(enemy, offset)
-    offset = offset or 4
-    if not enemy or not enemy.Character then return false end
-    local er = enemy.Character:FindFirstChild("HumanoidRootPart")
-    local mr = getRoot()
-    if er and mr then
-        mr.CFrame = er.CFrame * CFrame.new(0, 0, -offset)
-        -- On regarde vers l'ennemi
-        mr.CFrame = CFrame.lookAt(mr.Position, er.Position)
-        return true
-    end
-    return false
-end
-
--- Tp à une position précise
-local function tpTo(position, yOffset)
-    yOffset = yOffset or 5
-    local mr = getRoot()
-    if mr then
-        mr.CFrame = CFrame.new(position + Vector3.new(0, yOffset, 0))
-        return true
-    end
-    return false
+local function nearestTarget(maxDist)
+    return getAllTargets(maxDist)[1]
 end
 
 -- ══════════════════════════════════════════════════════════════
---  SIMULATION D'INPUTS CLAVIER (vraies touches)
---  C'est comme ça que JJS reçoit les attaques côté serveur
+--  INPUT SIMULATION
 -- ══════════════════════════════════════════════════════════════
-
 local function pressKey(keyCode)
-    VirtualInputMgr:SendKeyEvent(true,  keyCode, false, game)
-    task.wait()
-    VirtualInputMgr:SendKeyEvent(false, keyCode, false, game)
+    if not VirtualInputMgr then return end
+    pcall(function()
+        VirtualInputMgr:SendKeyEvent(true,  keyCode, false, game)
+        task.wait()
+        VirtualInputMgr:SendKeyEvent(false, keyCode, false, game)
+    end)
 end
 
-local function holdKey(keyCode, duration)
-    VirtualInputMgr:SendKeyEvent(true, keyCode, false, game)
-    task.wait(duration)
-    VirtualInputMgr:SendKeyEvent(false, keyCode, false, game)
-end
-
--- Clic gauche (M1 / attaque de base)
 local function pressM1()
-    VirtualInputMgr:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-    task.wait(0.05)
-    VirtualInputMgr:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    if not VirtualInputMgr then return end
+    pcall(function()
+        VirtualInputMgr:SendMouseButtonEvent(0,0,0,true,  game,1)
+        task.wait(0.05)
+        VirtualInputMgr:SendMouseButtonEvent(0,0,0,false, game,1)
+    end)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  TOUCHES DU JEU (configurables)
+--  GAME KEYBINDS
 -- ══════════════════════════════════════════════════════════════
--- M1 = Clic gauche (attaque de base)
--- F   = Block
--- Q   = Dash/Dodge
--- 1,2,3,4 = Skills
--- E   = Skill spécial / Counter
--- G   = Domain Expansion (sur certains persos)
 local KEYS = {
-    M1      = "click",         -- attaque de base
-    BLOCK   = Enum.KeyCode.F,
-    DODGE   = Enum.KeyCode.Q,
-    SKILL1  = Enum.KeyCode.One,
-    SKILL2  = Enum.KeyCode.Two,
-    SKILL3  = Enum.KeyCode.Three,
-    SKILL4  = Enum.KeyCode.Four,
-    DOMAIN  = Enum.KeyCode.G,
-    COUNTER = Enum.KeyCode.E,
-}
-
--- ══════════════════════════════════════════════════════════════
---  BLACK FLASH CHAIN (mécanique RÉELLE du jeu)
---
---  Dans JJS, le Black Flash = appuyer sur la touche d'une skill
---  (ex: 3 pour Divergent Fist / Vessel) avec le BON TIMING :
---    - Appuie sur 3 → animation commence
---    - Attends ~0.29s (frame de flash blanc)
---    - Appuie sur 3 à nouveau → BLACK FLASH !
---    - Enchaîne plusieurs fois = Black Flash Chain
---
---  Pour auto-farm les M1 : on spam le clic gauche en étant
---  collé à l'ennemi (le jeu détecte les hits par proximité).
--- ══════════════════════════════════════════════════════════════
-
-local BF_STATS = {
-    hits     = 0,
-    combos   = 0,
-    maxCombo = 0,
-    cur      = 0,
-}
-
-local S = {
-    -- Black Flash
-    BFActive    = false,
-    BFThread    = nil,
-    BFSkeyCode  = Enum.KeyCode.Three,  -- Touche du skill Black Flash
-    BFTiming1   = 0.29,   -- délai hit 1 → hit 2 (frame exacte)
-    BFTiming2   = 0.30,   -- délai hit 2 → hit 3
-    BFChainNum  = 3,      -- nombre de BF à chaîner
-    BFLoop      = true,   -- boucle infinie ou non
-    BFCooldown  = 1.0,    -- pause entre chaque rafale
-    BFAutoTP    = true,   -- tp derrière l'ennemi avant chaque rafale
-    BFTPOffset  = 3.5,    -- distance tp
-
-    -- Auto Farm M1
-    AutoFarm    = false,
-    FarmRange   = 6,      -- distance pour que les M1 touchent
-    FarmDelay   = 0.13,   -- délai entre chaque M1
-
-    -- Auto Block
-    AutoBlock   = false,
-
-    -- Auto Skills
-    AutoS1      = false,
-    AutoS2      = false,
-    AutoS3      = false,
-    AutoS4      = false,
-    SkillDelay  = 0.6,
-
-    -- Auto Dodge
-    AutoDodge   = false,
-
-    -- Domain
-    AutoDomain  = false,
-    DomainCD    = 30,
-
-    -- Player
-    WalkSpeed   = 16,
-    JumpPower   = 50,
-    NoClip      = false,
-    FlyOn       = false,
-    FlySpeed    = 60,
-    GodMode     = false,
-    InfStamina  = false,
-    SpinBot     = false,
-    SpinSpeed   = 5,
-
-    -- Collect
-    AutoCollect = false,
-
-    -- Visuals
-    ESP         = false,
-    ESPFill     = Color3.fromRGB(160, 0, 255),
-    ESPOutline  = Color3.fromRGB(255, 255, 255),
-    ESPDist     = 500,
-    FullBright  = false,
-    Aura        = false,
-    AuraColor   = Color3.fromRGB(120, 0, 220),
-
-    -- Misc
-    AntiAFK     = true,
-    LockOn      = false,
-    LockTarget  = nil,
-    HitboxOn    = false,
-    HitboxSize  = 6,
+    BLOCK  = Enum.KeyCode.F,
+    DODGE  = Enum.KeyCode.Q,
+    SKILL1 = Enum.KeyCode.One,
+    SKILL2 = Enum.KeyCode.Two,
+    SKILL3 = Enum.KeyCode.Three,
+    SKILL4 = Enum.KeyCode.Four,
+    DOMAIN = Enum.KeyCode.G,
 }
 
 -- ══════════════════════════════════════════════════════════════
 --  NOTIFY HELPER
 -- ══════════════════════════════════════════════════════════════
-local function notify(title, body, dur)
-    Rayfield:Notify({
+local function notify(title, content, dur)
+    WindUI:Notify({
         Title    = title,
-        Content  = body,
+        Content  = content,
         Duration = dur or 3,
-        Image    = 4483362458,
     })
 end
 
 -- ══════════════════════════════════════════════════════════════
---  EFFETS VISUELS BLACK FLASH
+--  BLACK FLASH VFX
 -- ══════════════════════════════════════════════════════════════
 local function bfVFX(origin)
     task.spawn(function()
-        for i = 1, 4 do
-            local bolt      = Instance.new("Part")
-            bolt.Anchored   = true
-            bolt.CanCollide = false
-            bolt.CastShadow = false
-            bolt.Size       = Vector3.new(0.15, math.random(3, 9), 0.15)
-            bolt.Material   = Enum.Material.Neon
-            bolt.Color      = Color3.fromRGB(180, 0, 255)
-            bolt.CFrame     = origin
-                * CFrame.Angles(math.random() * math.pi * 2, math.random() * math.pi * 2, 0)
-                * CFrame.new(math.random(-3, 3), 0, math.random(-3, 3))
-            bolt.Parent     = workspace
-            local tw = TweenService:Create(
-                bolt,
+        for _ = 1, 4 do
+            local b = Instance.new("Part")
+            b.Anchored=true; b.CanCollide=false; b.CastShadow=false
+            b.Size=Vector3.new(0.15, math.random(3,9), 0.15)
+            b.Material=Enum.Material.Neon; b.Color=Color3.fromRGB(180,0,255)
+            b.CFrame = origin
+                * CFrame.Angles(math.random()*math.pi*2, math.random()*math.pi*2, 0)
+                * CFrame.new(math.random(-3,3), 0, math.random(-3,3))
+            b.Parent = workspace
+            local tw = TweenService:Create(b,
                 TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {Transparency = 1, Size = Vector3.new(0.04, bolt.Size.Y * 1.6, 0.04)}
-            )
-            tw:Play()
-            tw.Completed:Wait()
-            bolt:Destroy()
+                {Transparency=1, Size=Vector3.new(0.04, b.Size.Y*1.6, 0.04)})
+            tw:Play(); tw.Completed:Wait(); b:Destroy()
         end
     end)
 end
 
 local function ringVFX(pos)
     task.spawn(function()
-        local r         = Instance.new("Part")
-        r.Anchored      = true
-        r.CanCollide    = false
-        r.CastShadow    = false
-        r.Shape         = Enum.PartType.Cylinder
-        r.Size          = Vector3.new(0.1, 0.8, 0.8)
-        r.CFrame        = CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2)
-        r.Material      = Enum.Material.Neon
-        r.Color         = Color3.fromRGB(200, 0, 255)
-        r.Transparency  = 0.2
-        r.Parent        = workspace
-        local tw = TweenService:Create(
-            r,
+        local r = Instance.new("Part")
+        r.Anchored=true; r.CanCollide=false; r.CastShadow=false
+        r.Shape=Enum.PartType.Cylinder
+        r.Size=Vector3.new(0.1,0.8,0.8)
+        r.CFrame=CFrame.new(pos)*CFrame.Angles(0,0,math.pi/2)
+        r.Material=Enum.Material.Neon; r.Color=Color3.fromRGB(200,0,255)
+        r.Transparency=0.2; r.Parent=workspace
+        local tw = TweenService:Create(r,
             TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {Size = Vector3.new(0.04, 10, 10), Transparency = 1}
-        )
-        tw:Play()
-        tw.Completed:Wait()
-        r:Destroy()
+            {Size=Vector3.new(0.04,10,10), Transparency=1})
+        tw:Play(); tw.Completed:Wait(); r:Destroy()
     end)
 end
 
-local function camShake(i, d)
+local function camShake(intensity, duration)
     task.spawn(function()
         local t = 0
-        while t < d do
-            local dt = task.wait()
-            t = t + dt
-            local dec = 1 - (t / d)
+        while t < duration do
+            local dt = task.wait(); t += dt; local dec=1-(t/duration)
             Cam.CFrame = Cam.CFrame * CFrame.Angles(
-                math.rad((math.random() - 0.5) * 2 * i * dec),
-                math.rad((math.random() - 0.5) * 2 * i * dec),
-                math.rad((math.random() - 0.5) * 0.4 * i * dec)
-            )
+                math.rad((math.random()-0.5)*2*intensity*dec),
+                math.rad((math.random()-0.5)*2*intensity*dec),
+                math.rad((math.random()-0.5)*0.4*intensity*dec))
         end
     end)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  MOTEUR BLACK FLASH CHAIN
---  Méthode: VirtualInputManager + timing précis
+--  BLACK FLASH ENGINE
 -- ══════════════════════════════════════════════════════════════
-local function doSingleBlackFlash(enemy)
+local function doSingleBlackFlash(target)
     local mr = getRoot()
-    if not mr then return false end
+    if not mr or not target or not target.root then return false end
 
-    -- TP si nécessaire
-    if S.BFAutoTP and enemy then
-        local er = enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart")
-        if er then
-            local d = (mr.Position - er.Position).Magnitude
-            if d > S.BFTPOffset + 2 then
-                mr.CFrame = er.CFrame * CFrame.new(0, 0, S.BFTPOffset)
-                task.wait(0.04)
-            end
+    if S.BFAutoTP then
+        local d = (mr.Position - target.root.Position).Magnitude
+        if d > S.BFTPOffset + 2 then
+            local behind = (target.root.CFrame * CFrame.new(0, 0, S.BFTPOffset)).Position
+            dashTo(behind, S.BFDashSpeed, 2)
         end
     end
 
-    -- Black Flash : presse touche skill 1 fois
+    mr = getRoot()
+    if mr and target.root then
+        mr.CFrame = CFrame.lookAt(mr.Position, target.root.Position)
+    end
+
     pressKey(S.BFSkeyCode)
-    -- Attend le "golden frame" (flash blanc dans l'anim)
     task.wait(S.BFTiming1)
-    -- Presse à nouveau pour déclencher le Black Flash
     pressKey(S.BFSkeyCode)
-    -- Attend le momentum
     task.wait(S.BFTiming2)
 
-    -- VFX
-    if mr then
-        bfVFX(mr.CFrame)
-        local er2 = enemy and enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart")
-        if er2 then ringVFX(er2.Position) end
-        camShake(2, 0.1)
-    end
+    mr = getRoot()
+    if mr then bfVFX(mr.CFrame); ringVFX(target.root.Position); camShake(2, 0.1) end
 
-    BF_STATS.hits = BF_STATS.hits + 1
-    BF_STATS.cur  = BF_STATS.cur  + 1
-    if BF_STATS.cur > BF_STATS.maxCombo then
-        BF_STATS.maxCombo = BF_STATS.cur
-    end
-
+    BF_STATS.hits += 1; BF_STATS.cur += 1
+    if BF_STATS.cur > BF_STATS.maxCombo then BF_STATS.maxCombo = BF_STATS.cur end
     return true
 end
 
 local function stopBFChain()
     S.BFActive = false
-    if S.BFThread then
-        task.cancel(S.BFThread)
-        S.BFThread = nil
-    end
+    if S.BFThread then task.cancel(S.BFThread); S.BFThread = nil end
     BF_STATS.cur = 0
-    notify(
-        "BF Chain OFF",
-        "Total hits : " .. BF_STATS.hits .. " | Max combo : " .. BF_STATS.maxCombo .. "x",
-        4
-    )
+    notify("BF Chain OFF",
+        "Total hits: "..BF_STATS.hits.." | Max combo: "..BF_STATS.maxCombo.."x", 4)
 end
 
 local function startBFChain()
-    if S.BFThread then
-        task.cancel(S.BFThread)
-        S.BFThread = nil
-    end
-    S.BFActive    = true
-    BF_STATS.hits = 0
-    BF_STATS.cur  = 0
-    BF_STATS.maxCombo = 0
-
-    notify(
-        "BF Chain ON",
-        "Skill : " .. tostring(S.BFSkeyCode) ..
-        " | " .. S.BFChainNum .. "x BF | Timing " ..
-        math.floor(S.BFTiming1 * 1000) .. "ms",
-        3
-    )
+    if S.BFThread then task.cancel(S.BFThread); S.BFThread = nil end
+    S.BFActive=true; BF_STATS.hits=0; BF_STATS.cur=0; BF_STATS.maxCombo=0
+    notify("BF Chain ON",
+        "Skill: "..tostring(S.BFSkeyCode).." | "..S.BFChainNum
+        .."x | Timing "..math.floor(S.BFTiming1*1000).."ms", 3)
 
     S.BFThread = task.spawn(function()
         while S.BFActive do
-            -- Sélection de la cible
-            local enemy = S.LockTarget
-            if enemy == nil or enemy.Character == nil then
-                enemy = nearestEnemy(300)
-            end
-
-            if enemy == nil or enemy.Character == nil then
+            local target = S.LockTarget or nearestTarget(400)
+            if not target then
                 task.wait(0.5)
+            elseif target.hum.Health <= 0 then
+                BF_STATS.cur=0; task.wait(0.3)
             else
-                local hum = enemy.Character:FindFirstChildOfClass("Humanoid")
-                if hum == nil or hum.Health <= 0 then
-                    BF_STATS.cur = 0
-                    task.wait(0.3)
-                else
-                    -- Phase 1 : Infinity TP
-                    if S.BFAutoTP then
-                        tpBehindEnemy(enemy, S.BFTPOffset)
-                        task.wait(0.04)
-                    end
-
-                    -- Phase 2 : Rafale de Black Flash
-                    local hits = 0
-                    for i = 1, S.BFChainNum do
-                        if not S.BFActive then break end
-
-                        -- Vérifier si l'ennemi est toujours vivant
-                        local h2 = enemy.Character and
-                                   enemy.Character:FindFirstChildOfClass("Humanoid")
-                        if h2 == nil or h2.Health <= 0 then
-                            BF_STATS.cur = 0
-                            break
-                        end
-
-                        doSingleBlackFlash(enemy)
-                        hits = hits + 1
-                    end
-
-                    -- Notif combo
-                    if hits >= 2 then
-                        notify(
-                            "COMBO x" .. hits,
-                            "BF Chain ! Total : " .. BF_STATS.hits,
-                            2
-                        )
-                    end
-
-                    -- Step back
-                    local mr2 = getRoot()
-                    if mr2 then
-                        mr2.CFrame = mr2.CFrame * CFrame.new(0, 0, 5)
-                    end
-
-                    task.wait(S.BFCooldown)
+                if S.BFAutoTP then
+                    local behind=(target.root.CFrame*CFrame.new(0,0,S.BFTPOffset)).Position
+                    dashTo(behind, S.BFDashSpeed, 2)
                 end
+                local hits = 0
+                for i = 1, S.BFChainNum do
+                    if not S.BFActive then break end
+                    if target.hum.Health <= 0 then BF_STATS.cur=0; break end
+                    doSingleBlackFlash(target); hits += 1
+                end
+                if hits >= 2 then
+                    notify("COMBO x"..hits, "BF Chain! Total: "..BF_STATS.hits, 2)
+                end
+                local mr2=getRoot()
+                if mr2 then dashTo((mr2.CFrame*CFrame.new(0,0,5)).Position, 150, 1) end
+                task.wait(S.BFCooldown)
             end
         end
     end)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  AUTO FARM M1 (spam clic gauche en étant collé à l'ennemi)
+--  AUTO FARM
 -- ══════════════════════════════════════════════════════════════
 local function startAutoFarm()
     task.spawn(function()
         while S.AutoFarm do
-            local enemy, dist = nearestEnemy(300)
-            if enemy and enemy.Character then
-                local er = enemy.Character:FindFirstChild("HumanoidRootPart")
-                local mr = getRoot()
-                if er and mr then
-                    -- Colle au range de hit
-                    if dist > S.FarmRange then
-                        mr.CFrame = er.CFrame * CFrame.new(0, 0, S.FarmRange - 0.5)
-                    end
-                    -- Regarde l'ennemi
-                    mr.CFrame = CFrame.lookAt(mr.Position, er.Position)
-                    -- M1
-                    pressM1()
+            local target = nearestTarget(400)
+            if target then
+                if target.dist > S.FarmRange then
+                    local approach=(target.root.CFrame*CFrame.new(0,0,S.FarmRange-0.5)).Position
+                    dashTo(approach, S.BFDashSpeed, 2)
                 end
+                local mr=getRoot()
+                if mr and target.root then
+                    mr.CFrame=CFrame.lookAt(mr.Position, target.root.Position)
+                end
+                pressM1()
             end
             task.wait(S.FarmDelay)
         end
@@ -518,56 +503,49 @@ local function startAutoFarm()
 end
 
 -- ══════════════════════════════════════════════════════════════
---  AUTO BLOCK (maintenir F enfoncé quand ennemi proche)
+--  AUTO BLOCK / DODGE
 -- ══════════════════════════════════════════════════════════════
 local function startAutoBlock()
     task.spawn(function()
-        local blocking = false
+        local blocking=false
         while S.AutoBlock do
-            local enemy, dist = nearestEnemy(20)
-            if dist < 18 and not blocking then
-                VirtualInputMgr:SendKeyEvent(true, KEYS.BLOCK, false, game)
-                blocking = true
-            elseif dist >= 18 and blocking then
-                VirtualInputMgr:SendKeyEvent(false, KEYS.BLOCK, false, game)
-                blocking = false
+            local t=nearestTarget(25)
+            local dist=t and t.dist or math.huge
+            if dist<20 and not blocking then
+                pcall(function() VirtualInputMgr:SendKeyEvent(true, KEYS.BLOCK,false,game) end)
+                blocking=true
+            elseif dist>=20 and blocking then
+                pcall(function() VirtualInputMgr:SendKeyEvent(false,KEYS.BLOCK,false,game) end)
+                blocking=false
             end
             task.wait(0.05)
         end
-        -- Release block
-        VirtualInputMgr:SendKeyEvent(false, KEYS.BLOCK, false, game)
+        pcall(function() VirtualInputMgr:SendKeyEvent(false,KEYS.BLOCK,false,game) end)
     end)
 end
 
--- ══════════════════════════════════════════════════════════════
---  AUTO DODGE (appuie Q quand ennemi très proche)
--- ══════════════════════════════════════════════════════════════
 local function startAutoDodge()
     task.spawn(function()
         while S.AutoDodge do
-            local enemy, dist = nearestEnemy(10)
-            if dist < 9 then
-                pressKey(KEYS.DODGE)
-                task.wait(0.3)
-            end
+            local t=nearestTarget(12)
+            if t and t.dist<10 then pressKey(KEYS.DODGE); task.wait(0.3) end
             task.wait(0.1)
         end
     end)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  AUTO DOMAIN (touche G)
+--  AUTO DOMAIN
 -- ══════════════════════════════════════════════════════════════
-local lastDomain = 0
+local lastDomain=0
 local function startAutoDomain()
     task.spawn(function()
         while S.AutoDomain do
-            local now    = os.clock()
-            local all    = allEnemies(100)
-            if #all >= 1 and (now - lastDomain) >= S.DomainCD then
-                pressKey(KEYS.DOMAIN)
-                lastDomain = now
-                notify("Domain", "Domaine declenche sur " .. #all .. " ennemi(s) !", 3)
+            local now=os.clock()
+            local all=getAllTargets(120)
+            if #all>=1 and (now-lastDomain)>=S.DomainCD then
+                pressKey(KEYS.DOMAIN); lastDomain=now
+                notify("Domain","Triggered on "..#all.." target(s)!",3)
             end
             task.wait(0.5)
         end
@@ -575,169 +553,83 @@ local function startAutoDomain()
 end
 
 -- ══════════════════════════════════════════════════════════════
---  AUTO SKILLS 1-4
+--  AUTO SKILLS
 -- ══════════════════════════════════════════════════════════════
 local function startSkill(keycode, flagName)
     task.spawn(function()
-        while S[flagName] do
-            pressKey(keycode)
-            task.wait(S.SkillDelay)
-        end
+        while S[flagName] do pressKey(keycode); task.wait(S.SkillDelay) end
     end)
 end
 
 -- ══════════════════════════════════════════════════════════════
---  FLY SYSTEM
+--  FLY
 -- ══════════════════════════════════════════════════════════════
-local FlyBV = nil
-local FlyBG = nil
-
+local FlyBV, FlyBG = nil, nil
 local function enableFly()
-    local root = getRoot()
-    if not root then return end
-    local hum = getHum()
-    if hum then hum.PlatformStand = true end
-
-    FlyBV           = Instance.new("BodyVelocity")
-    FlyBV.Velocity   = Vector3.zero
-    FlyBV.MaxForce   = Vector3.new(1e6, 1e6, 1e6)
-    FlyBV.Parent     = root
-
-    FlyBG            = Instance.new("BodyGyro")
-    FlyBG.MaxTorque  = Vector3.new(1e6, 1e6, 1e6)
-    FlyBG.D          = 100
-    FlyBG.P          = 1000
-    FlyBG.CFrame     = root.CFrame
-    FlyBG.Parent     = root
-
+    local root=getRoot(); if not root then return end
+    local hum=getHum(); if hum then hum.PlatformStand=true end
+    FlyBV=Instance.new("BodyVelocity")
+    FlyBV.Velocity=Vector3.zero; FlyBV.MaxForce=Vector3.new(1e6,1e6,1e6); FlyBV.Parent=root
+    FlyBG=Instance.new("BodyGyro")
+    FlyBG.MaxTorque=Vector3.new(1e6,1e6,1e6); FlyBG.D=100; FlyBG.P=1000
+    FlyBG.CFrame=root.CFrame; FlyBG.Parent=root
     task.spawn(function()
         while S.FlyOn do
-            local r2 = getRoot()
-            if not r2 then break end
-            local cf   = Cam.CFrame
-            local move = Vector3.zero
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cf.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cf.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cf.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cf.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                move = move + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                move = move - Vector3.new(0, 1, 0)
-            end
+            local r2=getRoot(); if not r2 then break end
+            local cf=Cam.CFrame; local move=Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move+=cf.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move-=cf.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move-=cf.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move+=cf.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space)       then move+=Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move-=Vector3.new(0,1,0) end
             if FlyBV and FlyBV.Parent then
-                FlyBV.Velocity = move.Magnitude > 0
-                    and move.Unit * S.FlySpeed
-                    or  Vector3.zero
+                FlyBV.Velocity=move.Magnitude>0 and move.Unit*S.FlySpeed or Vector3.zero
             end
-            if FlyBG and FlyBG.Parent then
-                FlyBG.CFrame = cf
-            end
+            if FlyBG and FlyBG.Parent then FlyBG.CFrame=cf end
             task.wait()
         end
     end)
 end
-
 local function disableFly()
-    S.FlyOn = false
-    local hum = getHum()
-    if hum then hum.PlatformStand = false end
-    if FlyBV then FlyBV:Destroy(); FlyBV = nil end
-    if FlyBG then FlyBG:Destroy(); FlyBG = nil end
+    S.FlyOn=false
+    local hum=getHum(); if hum then hum.PlatformStand=false end
+    if FlyBV then FlyBV:Destroy(); FlyBV=nil end
+    if FlyBG then FlyBG:Destroy(); FlyBG=nil end
 end
 
 -- ══════════════════════════════════════════════════════════════
---  GOD MODE
+--  GOD MODE / SPIN BOT / HITBOX
 -- ══════════════════════════════════════════════════════════════
 local function startGodMode()
     task.spawn(function()
         while S.GodMode do
-            local h = getHum()
-            if h and h.Health < h.MaxHealth then
-                h.Health = h.MaxHealth
-            end
+            local h=getHum(); if h and h.Health<h.MaxHealth then h.Health=h.MaxHealth end
             task.wait(0.05)
         end
     end)
 end
 
--- ══════════════════════════════════════════════════════════════
---  SPIN BOT
--- ══════════════════════════════════════════════════════════════
 local function startSpinBot()
     task.spawn(function()
         while S.SpinBot do
-            local r = getRoot()
-            if r then
-                r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(S.SpinSpeed), 0)
-            end
+            local r=getRoot()
+            if r then r.CFrame=r.CFrame*CFrame.Angles(0,math.rad(S.SpinSpeed),0) end
             task.wait()
         end
     end)
 end
 
--- ══════════════════════════════════════════════════════════════
---  HITBOX EXPANDER
--- ══════════════════════════════════════════════════════════════
 local function startHitbox()
     task.spawn(function()
         while S.HitboxOn do
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LP and p.Character then
-                    local r = p.Character:FindFirstChild("HumanoidRootPart")
-                    if r then
-                        r.Size = Vector3.new(S.HitboxSize, S.HitboxSize, S.HitboxSize)
-                    end
-                end
+            for _,t in ipairs(getAllTargets()) do
+                pcall(function() t.root.Size=Vector3.new(S.HitboxSize,S.HitboxSize,S.HitboxSize) end)
             end
             task.wait(0.5)
         end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character then
-                local r = p.Character:FindFirstChild("HumanoidRootPart")
-                if r then r.Size = Vector3.new(2, 2, 1) end
-            end
-        end
-    end)
-end
-
--- ══════════════════════════════════════════════════════════════
---  AUTO COLLECT
--- ══════════════════════════════════════════════════════════════
-local COLLECT_KW = {
-    "coin","orb","cursed","energy","xp","exp","item","pickup",
-    "shard","token","crystal","drop","reward","loot",
-}
-local function isCollectible(name)
-    local nl = name:lower()
-    for _, k in ipairs(COLLECT_KW) do
-        if nl:find(k) then return true end
-    end
-    return false
-end
-
-local function startAutoCollect()
-    task.spawn(function()
-        while S.AutoCollect do
-            local mr = getRoot()
-            if mr then
-                local nearest     = nil
-                local nearestDist = math.huge
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and isCollectible(obj.Name) then
-                        local d = (mr.Position - obj.Position).Magnitude
-                        if d < nearestDist then
-                            nearestDist = d
-                            nearest     = obj
-                        end
-                    end
-                end
-                if nearest then
-                    mr.CFrame = CFrame.new(nearest.Position + Vector3.new(0, 2, 0))
-                end
-            end
-            task.wait(0.3)
+        for _,t in ipairs(getAllTargets()) do
+            pcall(function() t.root.Size=Vector3.new(2,2,1) end)
         end
     end)
 end
@@ -745,158 +637,99 @@ end
 -- ══════════════════════════════════════════════════════════════
 --  AURA
 -- ══════════════════════════════════════════════════════════════
-local AuraSphere = nil
-
+local AuraSphere=nil
 local function updateAura()
-    local root = getRoot()
-    if not root then return end
+    local root=getRoot(); if not root then return end
     if S.Aura then
-        if AuraSphere == nil or AuraSphere.Parent == nil then
-            AuraSphere = Instance.new("SelectionSphere")
-            AuraSphere.SurfaceTransparency = 0.5
-            AuraSphere.SurfaceColor3       = S.AuraColor
-            AuraSphere.Color3              = S.AuraColor
-            AuraSphere.Adornee             = root
-            AuraSphere.Parent              = root
+        if not AuraSphere or not AuraSphere.Parent then
+            AuraSphere=Instance.new("SelectionSphere")
+            AuraSphere.SurfaceTransparency=0.5
+            AuraSphere.SurfaceColor3=S.AuraColor; AuraSphere.Color3=S.AuraColor
+            AuraSphere.Adornee=root; AuraSphere.Parent=root
         end
     else
-        if AuraSphere then
-            AuraSphere:Destroy()
-            AuraSphere = nil
-        end
+        if AuraSphere then AuraSphere:Destroy(); AuraSphere=nil end
     end
 end
 
 -- ══════════════════════════════════════════════════════════════
 --  ESP
 -- ══════════════════════════════════════════════════════════════
-local ESPData = {}
+local ESPData={}
 
 local function clearESP()
-    for _, objs in pairs(ESPData) do
-        for _, o in ipairs(objs) do
-            if o and o.Parent then
-                pcall(function() o:Destroy() end)
-            end
+    for _,objs in pairs(ESPData) do
+        for _,o in ipairs(objs) do
+            pcall(function() if o and o.Parent then o:Destroy() end end)
         end
     end
-    ESPData = {}
+    ESPData={}
 end
 
-local function makeESP(p)
-    if ESPData[p.Name] then return end
-    if not p.Character then return end
-    local pRoot = p.Character:FindFirstChild("HumanoidRootPart")
-    local pHum  = p.Character:FindFirstChildOfClass("Humanoid")
-    if not pRoot or not pHum then return end
+local function makeESPForTarget(target)
+    local key=tostring(target.root)
+    if ESPData[key] then return end
+    local objs={}
+    local model=target.root:FindFirstAncestorOfClass("Model") or target.root.Parent
 
-    local objs = {}
+    local hl=Instance.new("Highlight")
+    hl.FillColor=S.ESPFill; hl.OutlineColor=S.ESPOutline
+    hl.FillTransparency=0.45; hl.OutlineTransparency=0
+    hl.Adornee=model; hl.Parent=model
+    table.insert(objs,hl)
 
-    -- Highlight
-    local hl            = Instance.new("Highlight")
-    hl.FillColor        = S.ESPFill
-    hl.OutlineColor     = S.ESPOutline
-    hl.FillTransparency    = 0.45
-    hl.OutlineTransparency = 0
-    hl.Adornee          = p.Character
-    hl.Parent           = p.Character
-    table.insert(objs, hl)
+    local bb=Instance.new("BillboardGui")
+    bb.Size=UDim2.new(0,160,0,58); bb.StudsOffset=Vector3.new(0,4.5,0)
+    bb.AlwaysOnTop=true; bb.Adornee=target.root; bb.Parent=target.root
 
-    -- Billboard
-    local bb        = Instance.new("BillboardGui")
-    bb.Size         = UDim2.new(0, 160, 0, 58)
-    bb.StudsOffset  = Vector3.new(0, 4.5, 0)
-    bb.AlwaysOnTop  = true
-    bb.Adornee      = pRoot
-    bb.Parent       = pRoot
+    local bg=Instance.new("Frame",bb)
+    bg.Size=UDim2.fromScale(1,1); bg.BackgroundColor3=Color3.fromRGB(8,8,14)
+    bg.BackgroundTransparency=0.18
+    local bgC=Instance.new("UICorner",bg); bgC.CornerRadius=UDim.new(0,8)
+    local bgS=Instance.new("UIStroke",bg); bgS.Color=S.ESPFill
 
-    local bg            = Instance.new("Frame", bb)
-    bg.Size             = UDim2.fromScale(1, 1)
-    bg.BackgroundColor3 = Color3.fromRGB(8, 8, 14)
-    bg.BackgroundTransparency = 0.18
-    local bgCorner      = Instance.new("UICorner", bg)
-    bgCorner.CornerRadius = UDim.new(0, 8)
-    local bgStroke      = Instance.new("UIStroke", bg)
-    bgStroke.Color      = S.ESPFill
+    local nameL=Instance.new("TextLabel",bg)
+    nameL.Size=UDim2.new(1,0,0.38,0); nameL.BackgroundTransparency=1
+    nameL.TextColor3=Color3.new(1,1,1); nameL.TextScaled=true
+    nameL.Font=Enum.Font.GothamBold
+    nameL.Text=(target.isNPC and "🤖 " or "⚔ ")..target.name
 
-    local nameL         = Instance.new("TextLabel", bg)
-    nameL.Size          = UDim2.new(1, 0, 0.38, 0)
-    nameL.BackgroundTransparency = 1
-    nameL.TextColor3    = Color3.fromRGB(255, 255, 255)
-    nameL.TextScaled    = true
-    nameL.Font          = Enum.Font.GothamBold
-    nameL.Text          = "⚔ " .. p.Name
+    local hpBg=Instance.new("Frame",bg)
+    hpBg.Size=UDim2.new(0.9,0,0.13,0); hpBg.Position=UDim2.new(0.05,0,0.44,0)
+    hpBg.BackgroundColor3=Color3.fromRGB(60,10,10)
+    local hpBgC=Instance.new("UICorner",hpBg); hpBgC.CornerRadius=UDim.new(1,0)
 
-    local hpBg          = Instance.new("Frame", bg)
-    hpBg.Size           = UDim2.new(0.9, 0, 0.13, 0)
-    hpBg.Position       = UDim2.new(0.05, 0, 0.44, 0)
-    hpBg.BackgroundColor3 = Color3.fromRGB(60, 10, 10)
-    local hpBgC         = Instance.new("UICorner", hpBg)
-    hpBgC.CornerRadius  = UDim.new(1, 0)
+    local hpFill=Instance.new("Frame",hpBg)
+    local r0=math.clamp(target.hum.Health/math.max(target.hum.MaxHealth,1),0,1)
+    hpFill.Size=UDim2.fromScale(r0,1); hpFill.BackgroundColor3=Color3.fromRGB(50,220,80)
+    local hpFC=Instance.new("UICorner",hpFill); hpFC.CornerRadius=UDim.new(1,0)
 
-    local hpFill        = Instance.new("Frame", hpBg)
-    hpFill.Size         = UDim2.fromScale(
-        math.clamp(pHum.Health / math.max(pHum.MaxHealth, 1), 0, 1), 1
-    )
-    hpFill.BackgroundColor3 = Color3.fromRGB(50, 220, 80)
-    local hpFillC       = Instance.new("UICorner", hpFill)
-    hpFillC.CornerRadius = UDim.new(1, 0)
+    local infoL=Instance.new("TextLabel",bg)
+    infoL.Size=UDim2.new(1,0,0.3,0); infoL.Position=UDim2.fromScale(0,0.68)
+    infoL.BackgroundTransparency=1; infoL.TextColor3=Color3.fromRGB(200,200,200)
+    infoL.TextScaled=true; infoL.Font=Enum.Font.Gotham; infoL.Text="❤ -- / --  📍 --"
 
-    local infoL         = Instance.new("TextLabel", bg)
-    infoL.Size          = UDim2.new(1, 0, 0.3, 0)
-    infoL.Position      = UDim2.fromScale(0, 0.68)
-    infoL.BackgroundTransparency = 1
-    infoL.TextColor3    = Color3.fromRGB(200, 200, 200)
-    infoL.TextScaled    = true
-    infoL.Font          = Enum.Font.Gotham
-    infoL.Text          = "❤ -- / --  📍 --"
-
-    ESPData[p.Name] = objs
-    table.insert(objs, bb)
+    ESPData[key]=objs; table.insert(objs,bb)
 
     task.spawn(function()
-        while S.ESP and p and p.Character and ESPData[p.Name] do
-            local h2  = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-            local r2  = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-            local myR = getRoot()
-            if h2 and r2 then
-                local ratio = math.clamp(h2.Health / math.max(h2.MaxHealth, 1), 0, 1)
-                hpFill.Size = UDim2.fromScale(ratio, 1)
-                if ratio > 0.6 then
-                    hpFill.BackgroundColor3 = Color3.fromRGB(50, 220, 80)
-                elseif ratio > 0.3 then
-                    hpFill.BackgroundColor3 = Color3.fromRGB(230, 170, 20)
-                else
-                    hpFill.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
-                end
-                local d = myR and math.floor((myR.Position - r2.Position).Magnitude) or 0
-                infoL.Text = string.format("❤ %d/%d  📍 %d", math.floor(h2.Health), math.floor(h2.MaxHealth), d)
-                hl.FillColor    = S.ESPFill
-                hl.OutlineColor = S.ESPOutline
-            end
+        while S.ESP and target.root and target.root.Parent and ESPData[key] do
+            local myR=getRoot()
+            local ratio=math.clamp(target.hum.Health/math.max(target.hum.MaxHealth,1),0,1)
+            hpFill.Size=UDim2.fromScale(ratio,1)
+            hpFill.BackgroundColor3=ratio>0.6 and Color3.fromRGB(50,220,80)
+                or ratio>0.3 and Color3.fromRGB(230,170,20)
+                or Color3.fromRGB(220,40,40)
+            local d=myR and math.floor((myR.Position-target.root.Position).Magnitude) or 0
+            infoL.Text=string.format("❤ %d/%d  📍 %d",
+                math.floor(target.hum.Health), math.floor(target.hum.MaxHealth), d)
+            hl.FillColor=S.ESPFill; hl.OutlineColor=S.ESPOutline
             task.wait(0.15)
         end
     end)
 end
 
 local function refreshESP()
-    for name, _ in pairs(ESPData) do
-        if not Players:FindFirstChild(name) then
-            ESPData[name] = nil
-        end
-    end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then
-            local pR  = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-            local myR = getRoot()
-            if pR and myR then
-                local d = (myR.Position - pR.Position).Magnitude
-                if d <= S.ESPDist and not ESPData[p.Name] then
-                    makeESP(p)
-                end
-            end
-        end
-    end
+    for _,t in ipairs(getAllTargets(S.ESPDist)) do makeESPForTarget(t) end
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -904,31 +737,24 @@ end
 -- ══════════════════════════════════════════════════════════════
 local function setFullBright(on)
     if on then
-        Lighting.Brightness       = 2
-        Lighting.ClockTime        = 14
-        Lighting.FogEnd           = 100000
-        Lighting.GlobalShadows    = false
-        Lighting.Ambient          = Color3.fromRGB(178, 178, 178)
-        Lighting.OutdoorAmbient   = Color3.fromRGB(178, 178, 178)
+        Lighting.Brightness=2; Lighting.ClockTime=14; Lighting.FogEnd=100000
+        Lighting.GlobalShadows=false
+        Lighting.Ambient=Color3.fromRGB(178,178,178)
+        Lighting.OutdoorAmbient=Color3.fromRGB(178,178,178)
     else
-        Lighting.Brightness       = 1
-        Lighting.ClockTime        = 14
-        Lighting.GlobalShadows    = true
-        Lighting.Ambient          = Color3.fromRGB(70, 70, 70)
-        Lighting.OutdoorAmbient   = Color3.fromRGB(100, 100, 100)
+        Lighting.Brightness=1; Lighting.ClockTime=14; Lighting.GlobalShadows=true
+        Lighting.Ambient=Color3.fromRGB(70,70,70)
+        Lighting.OutdoorAmbient=Color3.fromRGB(100,100,100)
     end
 end
 
 -- ══════════════════════════════════════════════════════════════
---  LOCK ON LOOP
+--  LOCK ON
 -- ══════════════════════════════════════════════════════════════
 local function startLockOn()
     task.spawn(function()
-        while S.LockOn do
-            S.LockTarget = nearestEnemy(500)
-            task.wait(0.5)
-        end
-        S.LockTarget = nil
+        while S.LockOn do S.LockTarget=nearestTarget(500); task.wait(0.5) end
+        S.LockTarget=nil
     end)
 end
 
@@ -944,827 +770,509 @@ LP.Idled:Connect(function()
 end)
 
 -- ══════════════════════════════════════════════════════════════
---  CRÉATION FENÊTRE RAYFIELD
+--  WIND UI WINDOW
 -- ══════════════════════════════════════════════════════════════
-local Window = Rayfield:CreateWindow({
-   Name = "JJS Hub V4",
-   Icon = 0,
-   LoadingTitle = "Jujutsu Shenanigans Hub V4",
-   LoadingSubtitle = "by ibras100",
-   Theme = "Default",
-
-   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
-
-   DisableRayfieldPrompts = false,
-   DisableBuildWarnings = false, -- Prevents Rayfield from emitting warnings when the script has a version mismatch with the interface.
-
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = JJShubv4, -- Create a custom folder for your hub/game
-      FileName = "Config for jjs hub"
-   },
-
-   Discord = {
-      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
-      Invite = "noinvitelink", -- The Discord invite code, do not include Discord.gg/. E.g. Discord.gg/ ABCD would be ABCD
-      RememberJoins = true -- Set this to false to make them join the Discord every time they load it up
-   },
-
-   KeySystem = true, -- Set this to true to use our key system
-   KeySettings = {
-      Title = "Grab key",
-      Subtitle = "Key sys",
-      Note = "Copy the link for the key then enjoy !
-       https://lootdest.org/s?vO7bAEdw         ", -- Use this to tell the user how to get a key
-      FileName = "Sys key jjs hub", -- It is recommended to use something unique, as other scripts using Rayfield may overwrite your key file
-      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-      GrabKeyFromSite = true, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-      Key = {"https://pastebin.com/raw/NwuUCDeq"} -- List of keys that the system will accept, can be RAW file links (pastebin, github, etc.) or simple strings ("hello", "key22")
-   }
+local Window = WindUI:CreateWindow({
+    Title       = "JJS Hub V4",
+    Icon        = "zap",
+    Author      = "ibras100",
+    Folder      = "JJShubv4",
+    Size        = UDim2.fromOffset(580, 460),
+    Transparent = true,
+    Theme       = "Dark",
 })
 
--- ══════════════════════════════════════════════════════════════
---  TAB 1 : BLACK FLASH
--- ══════════════════════════════════════════════════════════════
-local T1 = Window:CreateTab("Black Flash", 4483362458)
+Window:ToggleTheme()   -- starts in Dark
 
-T1:CreateSection("Black Flash Chain (VirtualInput)")
+-- ══════════════════════════════════════════════════════════════
+--  TAB 1 — BLACK FLASH
+-- ══════════════════════════════════════════════════════════════
+local T1 = Window:CreateTab("Black Flash", "zap")
+
+T1:CreateSection("Black Flash Chain")
 
 T1:CreateToggle({
-    Name         = "ACTIVER BLACK FLASH CHAIN",
-    CurrentValue = false,
-    Flag         = "BFMainToggle",
-    Callback     = function(v)
+    Title    = "Enable Black Flash Chain",
+    Default  = false,
+    Callback = function(v)
         if v then startBFChain() else stopBFChain() end
     end,
 })
 
 T1:CreateDropdown({
-    Name            = "Touche du skill Black Flash",
-    Options         = {"1", "2", "3", "4"},
-    CurrentOption   = {"3"},
-    MultipleOptions = false,
-    Flag            = "BFKeyDrop",
-    Callback        = function(opt)
-        local chosen = type(opt) == "table" and opt[1] or opt
-        local map = {
-            ["1"] = Enum.KeyCode.One,
-            ["2"] = Enum.KeyCode.Two,
-            ["3"] = Enum.KeyCode.Three,
-            ["4"] = Enum.KeyCode.Four,
-        }
-        if map[chosen] then
-            S.BFSkeyCode = map[chosen]
-            notify("BF Key", "Touche changee -> " .. chosen, 2)
-        end
+    Title    = "Black Flash Skill Key",
+    Values   = {"1","2","3","4"},
+    Default  = 3,
+    Multi    = false,
+    Callback = function(v)
+        local map={["1"]=Enum.KeyCode.One,["2"]=Enum.KeyCode.Two,
+                   ["3"]=Enum.KeyCode.Three,["4"]=Enum.KeyCode.Four}
+        if map[v] then S.BFSkeyCode=map[v]; notify("BF Key","Key → "..v,2) end
     end,
 })
 
 T1:CreateSlider({
-    Name         = "Timing Hit 1 (golden frame, ms)",
-    Range        = {100, 600},
-    Increment    = 5,
-    Suffix       = "ms",
-    CurrentValue = 290,
-    Flag         = "BFTiming1",
-    Callback     = function(v)
-        S.BFTiming1 = v / 1000
-    end,
+    Title    = "Hit 1 Timing — golden frame (ms)",
+    Min=100, Max=600, Default=290, Increment=5, Suffix="ms",
+    Callback = function(v) S.BFTiming1=v/1000 end,
 })
 
 T1:CreateSlider({
-    Name         = "Timing Hit 2 (chain, ms)",
-    Range        = {100, 600},
-    Increment    = 5,
-    Suffix       = "ms",
-    CurrentValue = 300,
-    Flag         = "BFTiming2",
-    Callback     = function(v)
-        S.BFTiming2 = v / 1000
-    end,
+    Title    = "Hit 2 Timing — chain (ms)",
+    Min=100, Max=600, Default=300, Increment=5, Suffix="ms",
+    Callback = function(v) S.BFTiming2=v/1000 end,
 })
 
 T1:CreateSlider({
-    Name         = "Nombre de BF par rafale",
-    Range        = {1, 15},
-    Increment    = 1,
-    Suffix       = "x",
-    CurrentValue = 3,
-    Flag         = "BFChainNum",
-    Callback     = function(v)
-        S.BFChainNum = v
-    end,
+    Title    = "BF Count per Burst",
+    Min=1, Max=15, Default=3, Increment=1, Suffix="x",
+    Callback = function(v) S.BFChainNum=v end,
 })
 
 T1:CreateSlider({
-    Name         = "Cooldown entre rafales (ms)",
-    Range        = {300, 5000},
-    Increment    = 100,
-    Suffix       = "ms",
-    CurrentValue = 1000,
-    Flag         = "BFCooldownSl",
-    Callback     = function(v)
-        S.BFCooldown = v / 1000
-    end,
+    Title    = "Cooldown Between Bursts (ms)",
+    Min=300, Max=5000, Default=1000, Increment=100, Suffix="ms",
+    Callback = function(v) S.BFCooldown=v/1000 end,
 })
 
 T1:CreateToggle({
-    Name         = "Auto TP derriere l'ennemi",
-    CurrentValue = true,
-    Flag         = "BFAutoTP",
-    Callback     = function(v)
-        S.BFAutoTP = v
-    end,
+    Title    = "Auto Dash Behind Target",
+    Default  = true,
+    Callback = function(v) S.BFAutoTP=v end,
 })
 
 T1:CreateSlider({
-    Name         = "Distance TP (studs)",
-    Range        = {2, 10},
-    Increment    = 0.5,
-    Suffix       = " st",
-    CurrentValue = 3,
-    Flag         = "BFTPOff",
-    Callback     = function(v)
-        S.BFTPOffset = v
-    end,
+    Title    = "Dash Stop Distance (studs)",
+    Min=2, Max=10, Default=3, Increment=1, Suffix=" st",
+    Callback = function(v) S.BFTPOffset=v end,
 })
 
-T1:CreateSection("Actions manuelles")
+T1:CreateSlider({
+    Title    = "Dash Speed",
+    Min=80, Max=500, Default=280, Increment=10, Suffix=" st/s",
+    Callback = function(v) S.BFDashSpeed=v end,
+})
+
+T1:CreateSection("Manual Actions")
 
 T1:CreateButton({
-    Name     = "Black Flash x1 (manuel)",
+    Title    = "Black Flash ×1 (Manual)",
     Callback = function()
-        local e = nearestEnemy(200)
-        if e then
-            task.spawn(function()
-                doSingleBlackFlash(e)
-            end)
-            notify("BF", "Black Flash lance !", 2)
-        else
-            notify("BF", "Aucun ennemi.", 2)
-        end
+        local t=nearestTarget(300)
+        if t then task.spawn(function() doSingleBlackFlash(t) end); notify("BF","Black Flash fired!",2)
+        else notify("BF","No target found.",2) end
     end,
 })
 
 T1:CreateButton({
-    Name     = "Black Flash x5 Burst (manuel)",
+    Title    = "Black Flash ×5 Burst (Manual)",
     Callback = function()
-        local e = nearestEnemy(200)
-        if not e then
-            notify("BF Burst", "Aucun ennemi !", 2)
-            return
-        end
+        local t=nearestTarget(300)
+        if not t then notify("BF Burst","No target!",2); return end
         task.spawn(function()
-            tpBehindEnemy(e, S.BFTPOffset)
+            dashTo((t.root.CFrame*CFrame.new(0,0,S.BFTPOffset)).Position, S.BFDashSpeed, 2)
             task.wait(0.05)
-            for i = 1, 5 do
-                local h2 = e.Character and e.Character:FindFirstChildOfClass("Humanoid")
-                if h2 == nil or h2.Health <= 0 then break end
-                doSingleBlackFlash(e)
+            for i=1,5 do
+                if t.hum.Health<=0 then break end
+                doSingleBlackFlash(t)
             end
-            notify("BF Burst x5", "Termine !", 2)
+            notify("BF Burst ×5","Done!",2)
         end)
     end,
 })
 
 T1:CreateButton({
-    Name     = "Infinity TP (tp derriere ennemi)",
+    Title    = "Dash Behind Nearest Target",
     Callback = function()
-        local e = nearestEnemy(500)
-        if e then
-            tpBehindEnemy(e, S.BFTPOffset)
-            notify("Infinity", "Teleporte derriere " .. e.Name, 2)
-        else
-            notify("Infinity", "Aucun ennemi.", 2)
-        end
+        local t=nearestTarget(500)
+        if t then
+            task.spawn(function()
+                dashTo((t.root.CFrame*CFrame.new(0,0,S.BFTPOffset)).Position, S.BFDashSpeed, 3)
+            end)
+            notify("Dash","Dashing behind "..t.name,2)
+        else notify("Dash","No target found.",2) end
     end,
 })
 
 T1:CreateSection("Stats")
 
 T1:CreateButton({
-    Name     = "Voir les stats",
+    Title    = "View BF Stats",
     Callback = function()
-        notify(
-            "Stats BF",
-            "Hits : " .. BF_STATS.hits ..
-            "\nMax combo : " .. BF_STATS.maxCombo .. "x",
-            5
-        )
+        notify("BF Stats","Hits: "..BF_STATS.hits.."\nMax combo: "..BF_STATS.maxCombo.."x",5)
     end,
 })
 
 T1:CreateButton({
-    Name     = "Reset stats",
+    Title    = "Reset Stats",
     Callback = function()
-        BF_STATS.hits     = 0
-        BF_STATS.combos   = 0
-        BF_STATS.maxCombo = 0
-        BF_STATS.cur      = 0
-        notify("Stats", "Reinitialises !", 2)
+        BF_STATS.hits=0; BF_STATS.combos=0; BF_STATS.maxCombo=0; BF_STATS.cur=0
+        notify("Stats","Reset!",2)
     end,
 })
 
 -- ══════════════════════════════════════════════════════════════
---  TAB 2 : COMBAT
+--  TAB 2 — COMBAT
 -- ══════════════════════════════════════════════════════════════
-local T2 = Window:CreateTab("Combat", 4483362458)
+local T2 = Window:CreateTab("Combat", "sword")
 
-T2:CreateSection("Auto Farm M1")
+T2:CreateSection("Auto Farm M1  (Players + Dummies)")
 
 T2:CreateToggle({
-    Name         = "Auto Farm (M1 Spam)",
-    CurrentValue = false,
-    Flag         = "AutoFarm",
-    Callback     = function(v)
-        S.AutoFarm = v
-        if v then
-            startAutoFarm()
-            notify("Auto Farm", "Farm active ! (M1 spam)", 3)
-        end
+    Title="Auto Farm (M1 Spam)", Default=false,
+    Callback=function(v)
+        S.AutoFarm=v
+        if v then startAutoFarm(); notify("Auto Farm","Farm active! Works on dummies.",3) end
     end,
 })
 
 T2:CreateSlider({
-    Name         = "Delai entre M1 (ms)",
-    Range        = {60, 500},
-    Increment    = 10,
-    Suffix       = "ms",
-    CurrentValue = 130,
-    Flag         = "FarmDelay",
-    Callback     = function(v)
-        S.FarmDelay = v / 1000
-    end,
+    Title="Delay Between M1 (ms)", Min=60, Max=500, Default=130, Increment=10, Suffix="ms",
+    Callback=function(v) S.FarmDelay=v/1000 end,
 })
 
 T2:CreateSlider({
-    Name         = "Range de hit (studs)",
-    Range        = {3, 20},
-    Increment    = 0.5,
-    Suffix       = " st",
-    CurrentValue = 6,
-    Flag         = "FarmRange",
-    Callback     = function(v)
-        S.FarmRange = v
-    end,
+    Title="Hit Range (studs)", Min=2, Max=15, Default=5, Increment=1, Suffix=" st",
+    Callback=function(v) S.FarmRange=v end,
 })
 
 T2:CreateSection("Defense")
 
 T2:CreateToggle({
-    Name         = "Auto Block (F auto)",
-    CurrentValue = false,
-    Flag         = "AutoBlock",
-    Callback     = function(v)
-        S.AutoBlock = v
-        if v then startAutoBlock() end
-    end,
+    Title="Auto Block (F)", Default=false,
+    Callback=function(v) S.AutoBlock=v; if v then startAutoBlock() end end,
 })
 
 T2:CreateToggle({
-    Name         = "Auto Dodge (Q auto)",
-    CurrentValue = false,
-    Flag         = "AutoDodge",
-    Callback     = function(v)
-        S.AutoDodge = v
-        if v then startAutoDodge() end
-    end,
+    Title="Auto Dodge (Q)", Default=false,
+    Callback=function(v) S.AutoDodge=v; if v then startAutoDodge() end end,
 })
 
-T2:CreateSection("Skills (1/2/3/4)")
+T2:CreateSection("Skills")
 
-T2:CreateToggle({
-    Name         = "Auto Skill 1",
-    CurrentValue = false,
-    Flag         = "AutoS1",
-    Callback     = function(v)
-        S.AutoS1 = v
-        if v then startSkill(KEYS.SKILL1, "AutoS1") end
-    end,
-})
-
-T2:CreateToggle({
-    Name         = "Auto Skill 2",
-    CurrentValue = false,
-    Flag         = "AutoS2",
-    Callback     = function(v)
-        S.AutoS2 = v
-        if v then startSkill(KEYS.SKILL2, "AutoS2") end
-    end,
-})
-
-T2:CreateToggle({
-    Name         = "Auto Skill 3",
-    CurrentValue = false,
-    Flag         = "AutoS3",
-    Callback     = function(v)
-        S.AutoS3 = v
-        if v then startSkill(KEYS.SKILL3, "AutoS3") end
-    end,
-})
-
-T2:CreateToggle({
-    Name         = "Auto Skill 4",
-    CurrentValue = false,
-    Flag         = "AutoS4",
-    Callback     = function(v)
-        S.AutoS4 = v
-        if v then startSkill(KEYS.SKILL4, "AutoS4") end
-    end,
-})
+T2:CreateToggle({Title="Auto Skill 1", Default=false,
+    Callback=function(v) S.AutoS1=v; if v then startSkill(KEYS.SKILL1,"AutoS1") end end})
+T2:CreateToggle({Title="Auto Skill 2", Default=false,
+    Callback=function(v) S.AutoS2=v; if v then startSkill(KEYS.SKILL2,"AutoS2") end end})
+T2:CreateToggle({Title="Auto Skill 3", Default=false,
+    Callback=function(v) S.AutoS3=v; if v then startSkill(KEYS.SKILL3,"AutoS3") end end})
+T2:CreateToggle({Title="Auto Skill 4", Default=false,
+    Callback=function(v) S.AutoS4=v; if v then startSkill(KEYS.SKILL4,"AutoS4") end end})
 
 T2:CreateSlider({
-    Name         = "Delai entre skills (ms)",
-    Range        = {200, 3000},
-    Increment    = 50,
-    Suffix       = "ms",
-    CurrentValue = 600,
-    Flag         = "SkillDelaySl",
-    Callback     = function(v)
-        S.SkillDelay = v / 1000
-    end,
+    Title="Skill Delay (ms)", Min=200, Max=3000, Default=600, Increment=50, Suffix="ms",
+    Callback=function(v) S.SkillDelay=v/1000 end,
 })
 
 T2:CreateSection("Domain Expansion")
 
 T2:CreateToggle({
-    Name         = "Auto Domain (G auto)",
-    CurrentValue = false,
-    Flag         = "AutoDomain",
-    Callback     = function(v)
-        S.AutoDomain = v
-        if v then startAutoDomain() end
-    end,
+    Title="Auto Domain (G)", Default=false,
+    Callback=function(v) S.AutoDomain=v; if v then startAutoDomain() end end,
 })
 
 T2:CreateSlider({
-    Name         = "Cooldown Domain (sec)",
-    Range        = {10, 120},
-    Increment    = 5,
-    Suffix       = "s",
-    CurrentValue = 30,
-    Flag         = "DomainCDSl",
-    Callback     = function(v)
-        S.DomainCD = v
-    end,
+    Title="Domain Cooldown (sec)", Min=10, Max=120, Default=30, Increment=5, Suffix="s",
+    Callback=function(v) S.DomainCD=v end,
 })
 
 T2:CreateButton({
-    Name     = "Domain Expansion maintenant (G)",
-    Callback = function()
-        pressKey(KEYS.DOMAIN)
-        notify("Domain", "Touche G pressee !", 2)
-    end,
+    Title="Trigger Domain Now (G)",
+    Callback=function() pressKey(KEYS.DOMAIN); notify("Domain","G pressed!",2) end,
 })
 
 T2:CreateSection("Extras")
 
 T2:CreateToggle({
-    Name         = "Lock On (cible auto)",
-    CurrentValue = false,
-    Flag         = "LockOn",
-    Callback     = function(v)
-        S.LockOn = v
-        if v then startLockOn() else S.LockTarget = nil end
-    end,
+    Title="Lock On (Auto Target)", Default=false,
+    Callback=function(v) S.LockOn=v; if v then startLockOn() else S.LockTarget=nil end end,
 })
 
 T2:CreateToggle({
-    Name         = "Hitbox Expander",
-    CurrentValue = false,
-    Flag         = "HitboxOn",
-    Callback     = function(v)
-        S.HitboxOn = v
-        if v then startHitbox() end
-    end,
+    Title="Hitbox Expander", Default=false,
+    Callback=function(v) S.HitboxOn=v; if v then startHitbox() end end,
 })
 
 T2:CreateSlider({
-    Name         = "Taille hitbox",
-    Range        = {3, 50},
-    Increment    = 1,
-    Suffix       = " st",
-    CurrentValue = 6,
-    Flag         = "HitboxSizeSl",
-    Callback     = function(v)
-        S.HitboxSize = v
-    end,
+    Title="Hitbox Size", Min=3, Max=50, Default=6, Increment=1, Suffix=" st",
+    Callback=function(v) S.HitboxSize=v end,
 })
 
 -- ══════════════════════════════════════════════════════════════
---  TAB 3 : JOUEUR
+--  TAB 3 — PLAYER
 -- ══════════════════════════════════════════════════════════════
-local T3 = Window:CreateTab("Joueur", 4483362458)
+local T3 = Window:CreateTab("Player", "person-standing")
 
-T3:CreateSection("Mouvement")
+T3:CreateSection("Movement")
 
 T3:CreateSlider({
-    Name         = "Walk Speed",
-    Range        = {16, 400},
-    Increment    = 4,
-    Suffix       = " s/s",
-    CurrentValue = 16,
-    Flag         = "WalkSpeedSl",
-    Callback     = function(v)
-        S.WalkSpeed = v
-        local h = getHum()
-        if h then h.WalkSpeed = v end
-    end,
+    Title="Walk Speed", Min=16, Max=400, Default=16, Increment=4, Suffix=" s/s",
+    Callback=function(v) S.WalkSpeed=v; local h=getHum(); if h then h.WalkSpeed=v end end,
 })
 
 T3:CreateSlider({
-    Name         = "Jump Power",
-    Range        = {50, 800},
-    Increment    = 10,
-    Suffix       = " pow",
-    CurrentValue = 50,
-    Flag         = "JumpPowerSl",
-    Callback     = function(v)
-        S.JumpPower = v
-        local h = getHum()
-        if h then h.JumpPower = v end
-    end,
+    Title="Jump Power", Min=50, Max=800, Default=50, Increment=10, Suffix=" pow",
+    Callback=function(v) S.JumpPower=v; local h=getHum(); if h then h.JumpPower=v end end,
 })
 
 T3:CreateToggle({
-    Name         = "No Clip",
-    CurrentValue = false,
-    Flag         = "NoClip",
-    Callback     = function(v)
-        S.NoClip = v
-    end,
+    Title="No Clip", Default=false,
+    Callback=function(v) S.NoClip=v end,
 })
 
 T3:CreateToggle({
-    Name         = "Fly (WASD + Space / Ctrl)",
-    CurrentValue = false,
-    Flag         = "FlyToggle",
-    Callback     = function(v)
-        S.FlyOn = v
-        if v then enableFly() else disableFly() end
-    end,
+    Title="Fly  (WASD + Space / Ctrl)", Default=false,
+    Callback=function(v) S.FlyOn=v; if v then enableFly() else disableFly() end end,
 })
 
 T3:CreateSlider({
-    Name         = "Vitesse de vol",
-    Range        = {10, 300},
-    Increment    = 5,
-    Suffix       = " s/s",
-    CurrentValue = 60,
-    Flag         = "FlySpeedSl",
-    Callback     = function(v)
-        S.FlySpeed = v
-    end,
+    Title="Fly Speed", Min=10, Max=500, Default=60, Increment=10, Suffix=" s/s",
+    Callback=function(v) S.FlySpeed=v end,
 })
 
-T3:CreateSection("Sante")
+T3:CreateSection("Health")
 
 T3:CreateToggle({
-    Name         = "God Mode (HP regen)",
-    CurrentValue = false,
-    Flag         = "GodMode",
-    Callback     = function(v)
-        S.GodMode = v
-        if v then startGodMode() end
-    end,
+    Title="God Mode (HP Regen)", Default=false,
+    Callback=function(v) S.GodMode=v; if v then startGodMode() end end,
 })
 
 T3:CreateButton({
-    Name     = "Regen HP max maintenant",
-    Callback = function()
-        local h = getHum()
-        if h then
-            h.Health = h.MaxHealth
-            notify("HP", "Sante maximale !", 2)
-        end
+    Title="Restore Full HP Now",
+    Callback=function()
+        local h=getHum(); if h then h.Health=h.MaxHealth; notify("HP","Health maxed!",2) end
     end,
 })
 
 T3:CreateSection("Extras")
 
 T3:CreateToggle({
-    Name         = "Spin Bot",
-    CurrentValue = false,
-    Flag         = "SpinBot",
-    Callback     = function(v)
-        S.SpinBot = v
-        if v then startSpinBot() end
-    end,
+    Title="Spin Bot", Default=false,
+    Callback=function(v) S.SpinBot=v; if v then startSpinBot() end end,
 })
 
 T3:CreateSlider({
-    Name         = "Vitesse rotation",
-    Range        = {1, 30},
-    Increment    = 1,
-    Suffix       = " deg",
-    CurrentValue = 5,
-    Flag         = "SpinSpeedSl",
-    Callback     = function(v)
-        S.SpinSpeed = v
-    end,
+    Title="Spin Speed", Min=1, Max=30, Default=5, Increment=1, Suffix=" deg",
+    Callback=function(v) S.SpinSpeed=v end,
 })
 
 -- ══════════════════════════════════════════════════════════════
---  TAB 4 : TELEPORT
+--  TAB 4 — MOVE
 -- ══════════════════════════════════════════════════════════════
-local T4 = Window:CreateTab("Teleport", 4483362458)
+local T4 = Window:CreateTab("Move", "navigation")
 
-T4:CreateSection("TP Joueurs")
+T4:CreateSection("Quick Dash")
 
 T4:CreateButton({
-    Name     = "TP -> Ennemi le plus proche",
-    Callback = function()
-        local e, d = nearestEnemy()
-        if e and e.Character then
-            tpBehindEnemy(e, 4)
-            notify("TP", e.Name .. " (" .. math.floor(d) .. " studs)", 2)
-        else
-            notify("TP", "Aucun ennemi.", 2)
-        end
+    Title="Dash Behind Nearest Target",
+    Callback=function()
+        local t=nearestTarget()
+        if t then
+            task.spawn(function()
+                dashTo((t.root.CFrame*CFrame.new(0,0,S.BFTPOffset)).Position, S.BFDashSpeed, 3)
+            end)
+            notify("Dash","→ "..t.name,2)
+        else notify("Dash","No target found.",2) end
     end,
 })
 
 T4:CreateButton({
-    Name     = "TP -> Spawn",
-    Callback = function()
-        local mr = getRoot()
-        local sp = workspace:FindFirstChildOfClass("SpawnLocation")
-        if mr then
-            if sp then
-                mr.CFrame = sp.CFrame + Vector3.new(0, 5, 0)
-            else
-                mr.CFrame = CFrame.new(0, 10, 0)
-            end
-            notify("TP", "Au spawn !", 2)
-        end
+    Title="Dash Facing Nearest Target",
+    Callback=function()
+        local t=nearestTarget()
+        if t then
+            task.spawn(function()
+                dashTo((t.root.CFrame*CFrame.new(0,0,-S.BFTPOffset)).Position, S.BFDashSpeed, 3)
+                local mr=getRoot()
+                if mr then mr.CFrame=CFrame.lookAt(mr.Position,t.root.Position) end
+            end)
+            notify("Dash","Facing "..t.name,2)
+        else notify("Dash","No target found.",2) end
     end,
 })
+
+T4:CreateButton({
+    Title="Dash to Spawn",
+    Callback=function()
+        local sp=workspace:FindFirstChildOfClass("SpawnLocation")
+        local dest=sp and sp.Position or Vector3.new(0,5,0)
+        task.spawn(function() dashTo(dest+Vector3.new(0,3,0), S.BFDashSpeed, 5) end)
+        notify("Dash","Dashing to spawn!",2)
+    end,
+})
+
+T4:CreateSection("Dash Settings")
+
+T4:CreateSlider({
+    Title="Dash Speed (studs/s)", Min=80, Max=500, Default=280, Increment=10, Suffix=" st/s",
+    Callback=function(v) S.BFDashSpeed=v end,
+})
+
+T4:CreateSection("Dash to Player")
 
 T4:CreateDropdown({
-    Name            = "TP -> Joueur specifique",
-    Options         = (function()
-        local names = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP then table.insert(names, p.Name) end
+    Title="Dash to Specific Player",
+    Values=(function()
+        local names={}
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p~=LP then table.insert(names,p.Name) end
         end
-        if #names == 0 then table.insert(names, "(aucun)") end
+        if #names==0 then table.insert(names,"(none)") end
         return names
     end)(),
-    CurrentOption   = {},
-    MultipleOptions = false,
-    Flag            = "TpPlayerDrop",
-    Callback        = function(opt)
-        local name   = type(opt) == "table" and opt[1] or opt
-        local target = Players:FindFirstChild(name)
+    Default=1, Multi=false,
+    Callback=function(name)
+        local target=Players:FindFirstChild(name)
         if target and target.Character then
-            tpBehindEnemy(target, 4)
-            notify("TP", "-> " .. name, 2)
-        end
-    end,
-})
-
-T4:CreateSection("TP Predefined")
-
-T4:CreateButton({
-    Name     = "TP -> Coordonnees (0, 10, 0)",
-    Callback = function()
-        tpTo(Vector3.new(0, 0, 0), 10)
-        notify("TP", "Teleporte en 0,10,0", 2)
-    end,
-})
-
-T4:CreateButton({
-    Name     = "Copier ma position",
-    Callback = function()
-        local r = getRoot()
-        if r then
-            local p = r.Position
-            notify(
-                "Position",
-                string.format("X:%.1f Y:%.1f Z:%.1f", p.X, p.Y, p.Z),
-                5
-            )
-        end
-    end,
-})
-
--- ══════════════════════════════════════════════════════════════
---  TAB 5 : FARM
--- ══════════════════════════════════════════════════════════════
-local T5 = Window:CreateTab("Farm", 4483362458)
-
-T5:CreateSection("Auto Collect")
-
-T5:CreateToggle({
-    Name         = "Auto Collect Items",
-    CurrentValue = false,
-    Flag         = "AutoCollect",
-    Callback     = function(v)
-        S.AutoCollect = v
-        if v then startAutoCollect() end
-    end,
-})
-
-T5:CreateButton({
-    Name     = "Lister items proches",
-    Callback = function()
-        local found = {}
-        local mr    = getRoot()
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and isCollectible(obj.Name) then
-                local d = mr and (mr.Position - obj.Position).Magnitude or 0
-                table.insert(found, obj.Name .. "(" .. math.floor(d) .. "st)")
-                if #found >= 8 then break end
+            local r=target.Character:FindFirstChild("HumanoidRootPart")
+            if r then
+                task.spawn(function()
+                    dashTo((r.CFrame*CFrame.new(0,0,S.BFTPOffset)).Position, S.BFDashSpeed, 5)
+                end)
+                notify("Dash","→ "..name,2)
             end
         end
-        if #found > 0 then
-            notify("Items", table.concat(found, " | "), 5)
-        else
-            notify("Items", "Aucun item detecte.", 3)
+    end,
+})
+
+T4:CreateButton({
+    Title="Copy My Position",
+    Callback=function()
+        local r=getRoot()
+        if r then
+            local p=r.Position
+            notify("Position",string.format("X:%.1f  Y:%.1f  Z:%.1f",p.X,p.Y,p.Z),5)
         end
     end,
 })
 
 -- ══════════════════════════════════════════════════════════════
---  TAB 6 : VISUALS
+--  TAB 5 — VISUALS
 -- ══════════════════════════════════════════════════════════════
-local T6 = Window:CreateTab("Visuals", 4483362458)
+local T5 = Window:CreateTab("Visuals", "eye")
 
-T6:CreateSection("ESP")
+T5:CreateSection("ESP  (Players + Dummies)")
 
-T6:CreateToggle({
-    Name         = "ESP (Highlight + Billboard)",
-    CurrentValue = false,
-    Flag         = "ESPToggle",
-    Callback     = function(v)
-        S.ESP = v
+T5:CreateToggle({
+    Title="ESP (Highlight + Billboard)", Default=false,
+    Callback=function(v)
+        S.ESP=v
         if v then
             refreshESP()
             task.spawn(function()
-                while S.ESP do
-                    refreshESP()
-                    task.wait(5)
-                end
+                while S.ESP do refreshESP(); task.wait(5) end
                 clearESP()
             end)
-        else
-            clearESP()
-        end
+        else clearESP() end
     end,
 })
 
-T6:CreateSlider({
-    Name         = "Portee ESP",
-    Range        = {50, 2000},
-    Increment    = 50,
-    Suffix       = " st",
-    CurrentValue = 500,
-    Flag         = "ESPDistSl",
-    Callback     = function(v)
-        S.ESPDist = v
-    end,
+T5:CreateSlider({
+    Title="ESP Range", Min=50, Max=2000, Default=500, Increment=50, Suffix=" st",
+    Callback=function(v) S.ESPDist=v end,
 })
 
-T6:CreateColorPicker({
-    Name     = "Couleur Fill",
-    Color    = Color3.fromRGB(160, 0, 255),
-    Flag     = "ESPFillCP",
-    Callback = function(v)
-        S.ESPFill = v
-        for _, objs in pairs(ESPData) do
-            for _, o in ipairs(objs) do
-                if o:IsA("Highlight") then o.FillColor = v end
+T5:CreateColorPicker({
+    Title="Fill Color", Default=Color3.fromRGB(160,0,255),
+    Callback=function(v)
+        S.ESPFill=v
+        for _,objs in pairs(ESPData) do
+            for _,o in ipairs(objs) do
+                pcall(function() if o:IsA("Highlight") then o.FillColor=v end end)
             end
         end
     end,
 })
 
-T6:CreateColorPicker({
-    Name     = "Couleur Outline",
-    Color    = Color3.fromRGB(255, 255, 255),
-    Flag     = "ESPOutlineCP",
-    Callback = function(v)
-        S.ESPOutline = v
-        for _, objs in pairs(ESPData) do
-            for _, o in ipairs(objs) do
-                if o:IsA("Highlight") then o.OutlineColor = v end
+T5:CreateColorPicker({
+    Title="Outline Color", Default=Color3.fromRGB(255,255,255),
+    Callback=function(v)
+        S.ESPOutline=v
+        for _,objs in pairs(ESPData) do
+            for _,o in ipairs(objs) do
+                pcall(function() if o:IsA("Highlight") then o.OutlineColor=v end end)
             end
         end
     end,
 })
 
-T6:CreateSection("Effets")
+T5:CreateSection("Effects")
+
+T5:CreateToggle({
+    Title="Full Bright", Default=false,
+    Callback=function(v) S.FullBright=v; setFullBright(v) end,
+})
+
+T5:CreateToggle({
+    Title="Cursed Energy Aura", Default=false,
+    Callback=function(v) S.Aura=v; updateAura() end,
+})
+
+T5:CreateColorPicker({
+    Title="Aura Color", Default=Color3.fromRGB(120,0,220),
+    Callback=function(v)
+        S.AuraColor=v
+        if AuraSphere then AuraSphere.SurfaceColor3=v; AuraSphere.Color3=v end
+    end,
+})
+
+-- ══════════════════════════════════════════════════════════════
+--  TAB 6 — MISC
+-- ══════════════════════════════════════════════════════════════
+local T6 = Window:CreateTab("Misc", "settings")
+
+T6:CreateSection("Utilities")
 
 T6:CreateToggle({
-    Name         = "Full Bright",
-    CurrentValue = false,
-    Flag         = "FullBright",
-    Callback     = function(v)
-        S.FullBright = v
-        setFullBright(v)
-    end,
+    Title="Anti AFK", Default=true,
+    Callback=function(v) S.AntiAFK=v end,
 })
 
-T6:CreateToggle({
-    Name         = "Aura Cursed Energy",
-    CurrentValue = false,
-    Flag         = "AuraToggle",
-    Callback     = function(v)
-        S.Aura = v
-        updateAura()
-    end,
-})
-
-T6:CreateColorPicker({
-    Name     = "Couleur aura",
-    Color    = Color3.fromRGB(120, 0, 220),
-    Flag     = "AuraCP",
-    Callback = function(v)
-        S.AuraColor = v
-        if AuraSphere then
-            AuraSphere.SurfaceColor3 = v
-            AuraSphere.Color3        = v
+T6:CreateButton({
+    Title="List Nearby Targets (Players + Dummies)",
+    Callback=function()
+        local all=getAllTargets(500)
+        if #all==0 then notify("Targets","No targets nearby.",3); return end
+        local lines={}
+        for _,t in ipairs(all) do
+            table.insert(lines,
+                (t.isNPC and "[NPC] " or "[PLR] ")..t.name
+                .." HP:"..math.floor(t.hum.Health)
+                .." ("..math.floor(t.dist).."st)")
         end
+        notify("Targets ("..#all..")", table.concat(lines,"\n"), 7)
     end,
+})
+
+T6:CreateButton({
+    Title="My Stats",
+    Callback=function()
+        local h=getHum(); local r=getRoot(); local pos=r and r.Position or Vector3.zero
+        notify("Stats",string.format(
+            "HP: %.0f/%.0f\nWS: %d  JP: %d\nPos: %.0f, %.0f, %.0f",
+            h and h.Health or 0, h and h.MaxHealth or 0,
+            S.WalkSpeed, S.JumpPower, pos.X, pos.Y, pos.Z),5)
+    end,
+})
+
+T6:CreateButton({
+    Title="Rejoin Server",
+    Callback=function() TeleportService:Teleport(game.PlaceId, LP) end,
 })
 
 -- ══════════════════════════════════════════════════════════════
---  TAB 7 : MISC
--- ══════════════════════════════════════════════════════════════
-local T7 = Window:CreateTab("Misc", 4483362458)
-
-T7:CreateSection("Utilitaires")
-
-T7:CreateToggle({
-    Name         = "Anti AFK",
-    CurrentValue = true,
-    Flag         = "AntiAFK",
-    Callback     = function(v)
-        S.AntiAFK = v
-    end,
-})
-
-T7:CreateButton({
-    Name     = "Lister les joueurs",
-    Callback = function()
-        local names = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            local hp = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-            table.insert(names, p.Name .. (hp and " HP:" .. math.floor(hp.Health) or ""))
-        end
-        notify("Joueurs", table.concat(names, " | "), 5)
-    end,
-})
-
-T7:CreateButton({
-    Name     = "Mes stats",
-    Callback = function()
-        local h   = getHum()
-        local r   = getRoot()
-        local pos = r and r.Position or Vector3.zero
-        notify(
-            "Stats",
-            string.format(
-                "HP: %.0f/%.0f\nWS: %d JP: %d\nPos: %.0f,%.0f,%.0f",
-                h and h.Health    or 0,
-                h and h.MaxHealth or 0,
-                S.WalkSpeed, S.JumpPower,
-                pos.X, pos.Y, pos.Z
-            ),
-            5
-        )
-    end,
-})
-
-T7:CreateButton({
-    Name     = "Rejoin le serveur",
-    Callback = function()
-        TeleportService:Teleport(game.PlaceId, LP)
-    end,
-})
-
-T7:CreateButton({
-    Name     = "Sauvegarder config",
-    Callback = function()
-        Rayfield:SaveConfiguration()
-        notify("Config", "Sauvegardee !", 2)
-    end,
-})
-
--- ══════════════════════════════════════════════════════════════
---  HEARTBEAT PRINCIPAL
+--  HEARTBEAT
 -- ══════════════════════════════════════════════════════════════
 RunService.Heartbeat:Connect(function()
-    local c = getChar()
-    if not c then return end
-    local h = c:FindFirstChildOfClass("Humanoid")
+    local c=getChar(); if not c then return end
+    local h=c:FindFirstChildOfClass("Humanoid")
     if h then
-        if h.WalkSpeed ~= S.WalkSpeed then h.WalkSpeed = S.WalkSpeed end
-        if h.JumpPower  ~= S.JumpPower  then h.JumpPower  = S.JumpPower  end
+        if h.WalkSpeed~=S.WalkSpeed then h.WalkSpeed=S.WalkSpeed end
+        if h.JumpPower ~=S.JumpPower  then h.JumpPower =S.JumpPower  end
     end
     if S.NoClip then
-        for _, p in ipairs(c:GetDescendants()) do
-            if p:IsA("BasePart") then p.CanCollide = false end
+        for _,p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide=false end
         end
     end
     updateAura()
@@ -1775,21 +1283,14 @@ end)
 -- ══════════════════════════════════════════════════════════════
 LP.CharacterAdded:Connect(function(char)
     task.wait(1)
-    local h = char:FindFirstChildOfClass("Humanoid")
-    if h then
-        h.WalkSpeed = S.WalkSpeed
-        h.JumpPower  = S.JumpPower
-    end
+    local h=char:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed=S.WalkSpeed; h.JumpPower=S.JumpPower end
+    task.wait(0.5); if S.Aura then updateAura() end
 end)
 
 -- ══════════════════════════════════════════════════════════════
 --  INIT
 -- ══════════════════════════════════════════════════════════════
 task.wait(0.5)
-Rayfield:LoadConfiguration()
-
-notify(
-    "JJS Hub V4 charge !",
-    "VirtualInput actif — TP et Black Flash fonctionnels !",
-    5
-)
+notify("JJS Hub V4 — Wind UI",
+    "Loaded!  VIM: "..(VIM_OK and "OK ✓" or "Unavailable"), 5)
